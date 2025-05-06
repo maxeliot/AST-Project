@@ -1,16 +1,10 @@
 import subprocess
+from table_generation import *
 
 sqlite_path = "/home/test/sqlite/sqlite3"
-db_path = ":memory:"
+db_path = "test.db"
 
-# Example SQL command
-sql_cmd = 
-"""
-DROP TABLE IF EXISTS t0;
-CREATE TABLE t0 ( c0 INT );
-INSERT INTO t0 ( c0 ) VALUES (1);
-SELECT * FROM t0 WHERE 1 = 1;
-"""
+sql_cmd = generate_sqlite_table()
 
 # Run the command
 result = subprocess.run(
