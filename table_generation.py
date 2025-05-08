@@ -1,5 +1,6 @@
 import random
 import string
+import sqlite_utils as sqlu
 
 def generate_sqlite_table():
     """
@@ -9,14 +10,6 @@ def generate_sqlite_table():
     Returns:
         str: A valid SQLite CREATE TABLE statement
     """
-    # Available SQLite data types
-    data_types = [
-        "INTEGER", 
-        "TEXT", 
-        "REAL", 
-        "BLOB", 
-        "NUMERIC"
-    ]
     
     # Generate random number of columns (between 1 and 5)
     num_columns = random.randint(1, 5)
@@ -30,7 +23,7 @@ def generate_sqlite_table():
         column_name = f"c{i}"
         
         # Select a random data type
-        data_type = random.choice(data_types)
+        data_type = random.choice(sqlu.DATA_TYPES)
         
         # Randomly decide if the column should have constraints
         constraints = []
