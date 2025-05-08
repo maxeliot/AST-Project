@@ -74,21 +74,63 @@ def evaluateExpression(expression, pivot_row):
         str: The evaluated expression with column references replaced by their values.
     """
     # Rewrite the expression using the pivot row
-    rewritten_expression = "SELECT " + rewriteExpression(expression, pivot_row)
+    rewritten_expression = f"SELECT {rewriteExpression(expression, pivot_row)} IS TRUE"
     
     return sqlu.run_sqlite_query(rewritten_expression)
 
 
 def rectifyCondition(expression, pivot_row):
     output = evaluateExpression(expression, pivot_row)[0]
+
     if(output == "1"):
         return expression
     elif(output == "0"):
         return "NOT " + expression
     elif(output == "NULL"):
         return expression + " IS NULL"
+    elif(output == ""): #TODO this is bugfix for "WHERE 'some_string'" maybe not best way to do it
+        return "NOT " + expression
+
     
     return expression
+
+
+def generateQuery(pivot_row):
+    """
+    Generate a random SQL query based on the given pivot row.
+    Args:
+        pivot_row (dict): A dictionary mapping "table.column" to its value.
+    Returns:
+        str: A randomly generated SQL query.
+    """
+    # Generate a random expression
+    expression = generateExpression(0, pivot_row)
+    
+    # Rewrite the expression using the pivot row
+    rewritten_expression = rewriteExpression(expression, pivot_row)
+    recified_expression = rectifyCondition(rewritten_expression, pivot_row)
+    
+    # Create a SELECT statement
+    pivot_row_columns = ", ".join(pivot_row.keys())
+    tables = set(key.split(".")[0] for key in pivot_row.keys())
+    tables = " CROSS JOIN ".join(tables)
+
+    query = f"SELECT {pivot_row_columns} FROM {tables} WHERE {recified_expression};"
+    
+    return query
+
+def resultContainsPivotRow(result, pivot_row):
+    """
+    Check if the result contains the pivot row.
+    Args:
+        result (list): The result set from the SQL query.
+        pivot_row (dict): A dictionary mapping "table.column" to its value.
+    Returns:
+        bool: True if the result contains the pivot row, False otherwise.
+    """
+    pivot = "|".join([str(value) for key, value in pivot_row.items()])
+
+    return pivot in result[0].split("\n")
 
 
 # Example usage
@@ -99,13 +141,24 @@ if __name__ == "__main__":
         "t0.c1": "example",
         "t1.c0": "test",
     }
+
+    pivot = "|".join([str(value) for key, value in pivot_row.items()])
+    print(f"pivot: \n{pivot}\n")
     
+    # expression = generateExpression(0, pivot_row)
+    # print("Generated Expression:", expression)
+    # print("Rewritten Expression:", rewriteExpression(expression, pivot_row))
+    # print("Evaluated Expression:", evaluateExpression(expression, pivot_row))
+    # print("Corrected Expression:", rectifyCondition(expression, pivot_row))
+
+    query = generateQuery(pivot_row)
+    print("Generated Query: \n", generateQuery(pivot_row), "\n", sep="")
+
+    result = sqlu.run_sqlite_query(query)
+    print(f"Evaluated Query: \n{result[0]}\n")
+
+    print("Result Contains Pivot Row:", resultContainsPivotRow(result, pivot_row))
     
-    expression = generateExpression(0, pivot_row)
-    
-    print("Pivot Row:", pivot_row)
-    print("Generated Expression:", expression)
-    print("Corrected Expression:", rectifyCondition(expression, pivot_row))
 
 
 
