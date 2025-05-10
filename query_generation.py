@@ -73,7 +73,7 @@ if __name__ == "__main__":
     }
 
     query = generateQuery(schema)
-    print("Generated Query: \n", generateQuery(schema), "\n", sep="")
+    print("Generated Query: \n", query, "\n", sep="")
 
     result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_39_4)
 
