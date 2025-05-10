@@ -6,12 +6,12 @@ import subprocess
 MAX_DEPTH = 3
 
 
-def generateExpression(depth, pivot_row):
+def generateExpression(depth, schema):
     """
     Generate a random SQL expression based on the given depth and schema.
     Args:
         depth (int): The current depth of the expression tree.
-        pivot_row (dict): A dictionary mapping "table.column" to its value.
+        schema (dict): A dictionary mapping a table to its columns.
     Returns:
         str: A randomly generated SQL expression.
     """ 
@@ -23,144 +23,77 @@ def generateExpression(depth, pivot_row):
     if node_type == "LITERAL":
         return str(random.randint(-100, 100))
     elif node_type == "COLUMN":
-        table_column = random.choice(list(pivot_row.keys()))
+        #table_column = random.choice(list(schema.keys()))
+        table = random.choice(list(schema.keys()))
+        column = random.choice(schema[table])
+        table_column = f"{table}.{column}"
         return table_column
     elif node_type == "UNARY":
         # TODO FIGURE OUT HOW TO GENERATE A RANDOM OPERATOR WITH IS NULL WITHOUT BUGS
         #operator = random.choice(["NOT", "IS NULL", "IS NOT NULL"])
         operator = "NOT"
-        expression = generateExpression(depth + 1, pivot_row)
+        expression = generateExpression(depth + 1, schema)
         return f"{operator} {expression}"
 
 
-
-def rewriteExpression(expression, pivot_row):
+def generateQuery(schema):
     """
-    Rewrite an SQL-like expression by replacing column references with actual values from the pivot row.
-
+    Generate a random SQL query based on the given schema.
     Args:
-        expression (str): The SQL-like expression to evaluate.
-        pivot_row (dict): A dictionary mapping "table.column" to its value.
-
-    Returns:
-        str: The rewritten expression with column references replaced by their values.
-    """
-    tokens = expression.split()
-    evaluated_tokens = []
-
-    for token in tokens:
-        if token in pivot_row:  # Check if the token is a column reference
-            value = pivot_row[token]
-            # Add quotes for string values
-            if isinstance(value, str):
-                evaluated_tokens.append(f"'{value}'")
-            else:
-                evaluated_tokens.append(str(value))
-        else:
-            evaluated_tokens.append(token)
-
-    return " ".join(evaluated_tokens)
-
-
-def evaluateExpression(expression, pivot_row):
-    """
-    Evaluate an SQL-like expression by replacing column references with actual values from the pivot row.
-
-    Args:
-        expression (str): The SQL-like expression to evaluate.
-        pivot_row (dict): A dictionary mapping "table.column" to its value.
-
-    Returns:
-        str: The evaluated expression with column references replaced by their values.
-    """
-    # Rewrite the expression using the pivot row
-    rewritten_expression = f"SELECT {rewriteExpression(expression, pivot_row)} IS TRUE"
-    
-    return sqlu.run_sqlite_query(rewritten_expression)
-
-
-def rectifyCondition(expression, pivot_row):
-    output = evaluateExpression(expression, pivot_row)[0]
-
-    if(output == "1"):
-        return expression
-    elif(output == "0"):
-        return "NOT " + expression
-    elif(output == "NULL"):
-        return expression + " IS NULL"
-    elif(output == ""): #TODO this is bugfix for "WHERE 'some_string'" maybe not best way to do it
-        return "NOT " + expression
-
-    
-    return expression
-
-
-def generateQuery(pivot_row):
-    """
-    Generate a random SQL query based on the given pivot row.
-    Args:
-        pivot_row (dict): A dictionary mapping "table.column" to its value.
+        schema (dict): A dictionary mapping a table to its columns.
     Returns:
         str: A randomly generated SQL query.
     """
+
     # Generate a random expression
-    expression = generateExpression(0, pivot_row)
-    
-    # Rewrite the expression using the pivot row
-    rewritten_expression = rewriteExpression(expression, pivot_row)
-    recified_expression = rectifyCondition(rewritten_expression, pivot_row)
+    expression = generateExpression(0, schema)
     
     # Create a SELECT statement
-    pivot_row_columns = ", ".join(pivot_row.keys())
-    tables = set(key.split(".")[0] for key in pivot_row.keys())
-    tables = " CROSS JOIN ".join(tables)
+    tables = schema.keys()
+    schema_columns = []
+    for table in tables:
+        columns = schema[table]
+        for column in columns:
+            schema_columns.append(f"{table}.{column}")
+    schema_columns = ", ".join(schema_columns)
+    
+    tables_join = " CROSS JOIN ".join(tables)
 
-    query = f"SELECT {pivot_row_columns} FROM {tables} WHERE {recified_expression};"
+    query = f"SELECT {schema_columns} FROM {tables_join} WHERE {expression};"
     
     return query
-
-def resultContainsPivotRow(result, pivot_row):
-    """
-    Check if the result contains the pivot row.
-    Args:
-        result (list): The result set from the SQL query.
-        pivot_row (dict): A dictionary mapping "table.column" to its value.
-    Returns:
-        bool: True if the result contains the pivot row, False otherwise.
-    """
-    pivot = "|".join([str(value) for key, value in pivot_row.items()])
-
-    return pivot in result[0].split("\n")
 
 
 # Example usage
 if __name__ == "__main__":
 
-    pivot_row = {
-        "t0.c0": 42,
-        "t0.c1": "example",
-        "t1.c0": "test",
+    schema = {
+        "t0": ["c0", "c1"],
+        "t1": ["c0"]
     }
 
-    pivot = "|".join([str(value) for key, value in pivot_row.items()])
-    print(f"pivot: \n{pivot}\n")
+    query = generateQuery(schema)
+    print("Generated Query: \n", generateQuery(schema), "\n", sep="")
+
+    result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_39_4)
+
+    rows_returned = result[0].split("\n")
+    print("Rows Returned on version 3.39.4:")
+    for row in rows_returned:
+        print(row)
     
-    # expression = generateExpression(0, pivot_row)
-    # print("Generated Expression:", expression)
-    # print("Rewritten Expression:", rewriteExpression(expression, pivot_row))
-    # print("Evaluated Expression:", evaluateExpression(expression, pivot_row))
-    # print("Corrected Expression:", rectifyCondition(expression, pivot_row))
+    print()
 
-    query = generateQuery(pivot_row)
-    print("Generated Query: \n", generateQuery(pivot_row), "\n", sep="")
+    result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
 
-    result = sqlu.run_sqlite_query(query)
-    print(f"Evaluated Query: \n{result[0]}\n")
+    rows_returned2 = result[0].split("\n")
+    print("Rows Returned on version 3.49.2:")
+    for row in rows_returned2:
+        print(row)
+    print()
 
-    print("Result Contains Pivot Row:", resultContainsPivotRow(result, pivot_row))
+    print(f"Results on different versions match (order independent): {set(rows_returned2) == set(rows_returned)}")
     
-
-
 
 
 
