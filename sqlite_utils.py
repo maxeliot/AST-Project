@@ -8,11 +8,14 @@ DATA_TYPES = [
     "BLOB"
 ]
 
-SQLITE_3_26_0 = "/usr/bin/sqlite3-3.26.0"
+SQLITE_3_26_0 = "/home/test/sqlite/sqlite3" # Use this path as it allows for coverage with gcov
 SQLITE_3_39_4 = "/usr/bin/sqlite3-3.39.4"
 SQLITE_3_49_2 = "/usr/bin/sqlite3-3.49.2"
 
 DB_PATH = "test.db"
+
+
+
 
 def run_sqlite_query(query, sqlite_path):
     """
@@ -23,7 +26,8 @@ def run_sqlite_query(query, sqlite_path):
 
     Returns:
         tuple: A tuple containing the standard output and standard error from the SQLite command.
-    """
+    """ 
+
     result = subprocess.run(
         [sqlite_path, DB_PATH],
         input=query,
@@ -36,6 +40,6 @@ def run_sqlite_query(query, sqlite_path):
 # Example usage
 if __name__ == "__main__":
     query = "SELECT sqlite_version();"
-    stdout, stderr = run_sqlite_query(query, SQLITE_3_39_4)
+    stdout, stderr = run_sqlite_query(query, SQLITE_3_26_0)
     print("STDOUT:\n", stdout)
     print("STDERR:\n", stderr)
