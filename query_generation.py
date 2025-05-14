@@ -17,7 +17,7 @@ def generateExpression(depth, schema):
     """ 
     types = ["LITERAL", "COLUMN"]
     if depth < MAX_DEPTH:
-        types.append("UNARY")
+        types.extend(["UNARY", "BINARY"])
     
     node_type = random.choice(types)
     if node_type == "LITERAL":
@@ -27,13 +27,16 @@ def generateExpression(depth, schema):
         table = random.choice(list(schema.keys()))
         column = random.choice(schema[table])
         table_column = f"{table}.{column}"
-        return table_column
+        return f"({table_column} {random.choice(['', ' IS NULL', ' IS NOT NULL'])})"
     elif node_type == "UNARY":
-        # TODO FIGURE OUT HOW TO GENERATE A RANDOM OPERATOR WITH IS NULL WITHOUT BUGS
-        #operator = random.choice(["NOT", "IS NULL", "IS NOT NULL"])
         operator = "NOT"
         expression = generateExpression(depth + 1, schema)
         return f"{operator} {expression}"
+    elif node_type == "BINARY":
+        operator = random.choice(["=", "<", ">", "<=", ">=", "<>", "AND", "OR"])
+        left_expression = generateExpression(depth + 1, schema)
+        right_expression = generateExpression(depth + 1, schema)
+        return f"{left_expression} {operator} {right_expression}"
 
 
 def generateQuery(schema):
@@ -75,10 +78,10 @@ if __name__ == "__main__":
     query = generateQuery(schema)
     print("Generated Query: \n", query, "\n", sep="")
 
-    result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_39_4)
+    result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
 
     rows_returned = result[0].split("\n")
-    print("Rows Returned on version 3.39.4:")
+    print("Rows Returned on version 3.26.0:")
     for row in rows_returned:
         print(row)
     
