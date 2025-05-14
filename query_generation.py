@@ -5,6 +5,40 @@ import subprocess
 
 MAX_DEPTH = 3
 
+def generate_literal():
+    kind = random.choice(["int", "text", "null"])
+    if kind == "int":
+        return str(random.randint(-1e6, 1e6))
+    elif kind == "text":
+        return f"'{random.choice(['foo', 'bar', 'baz'])}'"
+    elif kind == "null":
+        return "NULL"
+
+def wrap_with_function(expr):
+    functions = ["ABS", "LENGTH", "LOWER", "UPPER", "COALESCE"]
+    func = random.choice(functions)
+    if func == "COALESCE":
+        alt = generate_literal()
+        return f"{func}({expr}, {alt})"
+    return f"{func}({expr})"
+
+def generate_case_expression(depth, schema):
+    cond = generateExpression(depth + 1, schema)
+    then_expr = generateExpression(depth + 1, schema)
+    else_expr = generateExpression(depth + 1, schema)
+    return f"(CASE WHEN {cond} THEN {then_expr} ELSE {else_expr} END)"
+
+def generate_special_binary(depth, schema):
+    op = random.choice(["BETWEEN", "IN", "LIKE"])
+    column = generateExpression(depth + 1, schema)
+    if op == "BETWEEN":
+        return f"{column} BETWEEN {generate_literal()} AND {generate_literal()}"
+    elif op == "IN":
+        in_list = ", ".join(generate_literal() for _ in range(random.randint(2, 5)))
+        return f"{column} IN ({in_list})"
+    elif op == "LIKE":
+        pattern = f"'%{random.choice(['a', 'b', 'c'])}%'"
+        return f"{column} LIKE {pattern}"
 
 def generateExpression(depth, schema):
     """
@@ -15,28 +49,37 @@ def generateExpression(depth, schema):
     Returns:
         str: A randomly generated SQL expression.
     """ 
-    types = ["LITERAL", "COLUMN"]
-    if depth < MAX_DEPTH:
-        types.extend(["UNARY", "BINARY"])
-    
-    node_type = random.choice(types)
+    if depth > MAX_DEPTH:
+        return generate_literal()
+
+    node_type = random.choices(
+        ["LITERAL", "COLUMN", "UNARY", "BINARY", "CASE", "SPECIAL"],
+        weights=[1, 1, 1, 2, 0.5, 0.5]
+    )[0]
+
     if node_type == "LITERAL":
-        return str(random.randint(-100, 100))
+        return generate_literal()
     elif node_type == "COLUMN":
-        #table_column = random.choice(list(schema.keys()))
         table = random.choice(list(schema.keys()))
         column = random.choice(schema[table])
-        table_column = f"{table}.{column}"
-        return f"({table_column} {random.choice(['', ' IS NULL', ' IS NOT NULL'])})"
+        expr = f"{table}.{column}"
+        if random.random() < 0.3:
+            expr = f"({expr} {random.choice(['IS NULL', 'IS NOT NULL'])})"
+        elif random.random() < 0.5:
+            expr = wrap_with_function(expr)
+        return expr
     elif node_type == "UNARY":
-        operator = "NOT"
-        expression = generateExpression(depth + 1, schema)
-        return f"{operator} {expression}"
+        return f"NOT ({generateExpression(depth + 1, schema)})"
     elif node_type == "BINARY":
-        operator = random.choice(["=", "<", ">", "<=", ">=", "<>", "AND", "OR"])
-        left_expression = generateExpression(depth + 1, schema)
-        right_expression = generateExpression(depth + 1, schema)
-        return f"{left_expression} {operator} {right_expression}"
+        op = random.choice(["=", "<", ">", "<=", ">=", "<>", "AND", "OR"])
+        left = generateExpression(depth + 1, schema)
+        right = generateExpression(depth + 1, schema)
+        return f"({left} {op} {right})"
+    elif node_type == "CASE":
+        return generate_case_expression(depth, schema)
+    elif node_type == "SPECIAL":
+        return generate_special_binary(depth, schema)
+
 
 
 def generateQuery(schema):
@@ -62,7 +105,8 @@ def generateQuery(schema):
     
     tables_join = " CROSS JOIN ".join(tables)
 
-    query = f"SELECT {schema_columns} FROM {tables_join} WHERE {expression};"
+    distinct = random.choice(["DISTINCT", ""])
+    query = f"SELECT {distinct} {schema_columns} FROM {tables_join} WHERE {expression};"
     
     return query
 

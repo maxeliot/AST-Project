@@ -9,7 +9,8 @@ import os
 import re
 import csv
 
-NUMBER_OF_QUERIES = 100
+NUMBER_OF_QUERIES = 200
+COVERAGE_INTERVAL = NUMBER_OF_QUERIES // 10
 
 def coverage(iteration):
     """
@@ -48,7 +49,7 @@ def cleanup_gcda_files():
         os.remove(gcda_file)
 
 
-def measure_performance(number_queries, schema):
+def measure_performance_generation(number_queries, schema):
     start_time = time.time()
 
     for i in range(number_queries):
@@ -60,7 +61,32 @@ def measure_performance(number_queries, schema):
     print(f"Queries generated per minute: {queries_per_minute}")
 
     # Output the performance metrics to a CSV file
-    csv_file = "/workspace/results/performance.csv"
+    csv_file = "/workspace/results/perf-generation-only.csv"
+    with open(csv_file, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([queries_per_minute])
+
+def measure_performance_all(number_queries, schema):
+    start_time = time.time()
+
+    for i in range(number_queries):
+        query = query_generation.generateQuery(schema)
+
+        result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
+        rows_returned = result[0].split("\n")
+
+        result2 = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
+        rows_returned2 = result2[0].split("\n")
+
+        set(rows_returned2) != set(rows_returned)
+
+    end_time = time.time()
+
+    queries_per_minute = int((number_queries / (end_time - start_time)) * 60)
+    print(f"Queries generated per minute: {queries_per_minute}")
+
+    # Output the performance metrics to a CSV file
+    csv_file = "/workspace/results/perf-generation-execution.csv"
     with open(csv_file, mode="a", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([queries_per_minute])
@@ -73,8 +99,6 @@ if __name__ == "__main__":
         f.write("")
     with open("/workspace/results/coverage.csv", "w") as f:
         f.write("")
-    with open("/workspace/results/performance.csv", "w") as f:
-        f.write("Queries Generated Per Minute\n")
 
     # Example schema
     schema = {
@@ -82,12 +106,12 @@ if __name__ == "__main__":
         "t1": ["c0"]
     }
 
-    measure_performance(NUMBER_OF_QUERIES, schema)
+    measure_performance_generation(NUMBER_OF_QUERIES, schema)
+    measure_performance_all(NUMBER_OF_QUERIES, schema)
 
 
     # Cleanup .gcda files before running the query
     cleanup_gcda_files()
-    
     
 
     for i in range(NUMBER_OF_QUERIES):
@@ -114,8 +138,6 @@ if __name__ == "__main__":
                 print(row)
             print()
 
-        if(i % 10 == 0):
+        if(i % COVERAGE_INTERVAL == 0):
             coverage(i)
-    
 
-    subprocess.run(["/workspace/measuring/coverage.sh"])
