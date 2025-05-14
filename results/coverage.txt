@@ -1,5 +1,0 @@
-File 'sqlite3.c'
-Lines executed:15.57% of 47318
-Creating 'sqlite3.c.gcov'
-
-Lines executed:15.57% of 47318

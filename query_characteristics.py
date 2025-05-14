@@ -3,7 +3,8 @@ import csv
 import sqlite_utils as sqlu
 
 CLAUSES = ["SELECT", "JOIN", "WHERE", "GROUP BY", "ORDER BY", "HAVING", "INSERT", "UPDATE", "DELETE",
-               "CREATE TABLE", "DROP TABLE", "ALTER TABLE", "INDEX", "VIEW", "NOT"]
+               "CREATE TABLE", "DROP TABLE", "ALTER TABLE", "INDEX", "VIEW", "NOT", "ABS", "LENGTH", "LOWER", "UPPER", "COALESCE",
+               "CASE WHEN", "BETWEEN", "IN", "LIKE", "EXISTS", "UNION", "INTERSECT", "EXCEPT",]
 
 def analyze_query(query):
     """
@@ -17,7 +18,7 @@ def analyze_query(query):
     """
     # Frequency of SQL clauses
     clauses = CLAUSES
-    clause_counts = {clause: len(re.findall(rf"\b{clause}\b", query, re.IGNORECASE)) for clause in clauses}
+    clause_counts = {clause: 1 if re.search(rf"\b{clause}\b", query, re.IGNORECASE) else 0 for clause in clauses}
 
     # Expression depth (count nested parentheses)
     expression_depth = 0
@@ -36,25 +37,12 @@ def analyze_query(query):
     }
 
 def is_query_valid(query, sqlite_version):
-    """
-    Check if the SQL query is valid by executing it.
+    stdout, stderr =  sqlu.run_sqlite_query(query, sqlite_version)
+    return stderr == ""
 
-    Args:
-        query (str): The SQL query to execute.
-        sqlite_version (str): The SQLite version to use.
-
-    Returns:
-        bool: True if the query is valid, False otherwise.
-    """
-    return sqlu.run_sqlite_query(query, sqlite_version)[1] == ""
-
-def collect_statistics(schema):
+def collect_statistics():
     """
     Analyze SQL queries from a file and collect statistics.
-
-    Args:
-        schema (dict): The database schema (not used in this version).
-        num_queries (int): The number of queries to analyze.
     """
     valid_queries = 0
     invalid_queries = 0
@@ -78,11 +66,14 @@ def collect_statistics(schema):
         for clause, count in analysis["clause_counts"].items():
             total_clause_counts[clause] += count
 
+    total_queries = valid_queries + invalid_queries
+
     # Output clause counts to a CSV file
     csv_file = "/workspace/results/clause_counts.csv"
     with open(csv_file, mode="w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Clause", "Count"])
+        writer.writerow(["Total Queries", total_queries])
         for clause, count in total_clause_counts.items():
             writer.writerow([clause, count])
 
@@ -98,8 +89,4 @@ def collect_statistics(schema):
 
 # Example usage
 if __name__ == "__main__":
-    schema = {
-        "t0": ["c0", "c1"],
-        "t1": ["c0"]
-    }
-    collect_statistics(schema)
+    collect_statistics()
