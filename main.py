@@ -146,6 +146,7 @@ if __name__ == "__main__":
                 print(row)
             print()
 
+
         if(i % COVERAGE_INTERVAL == 0):
             coverage(i)
 
