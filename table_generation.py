@@ -159,23 +159,23 @@ def generate_row(table_name, columns, rows, tables):
             sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
     else:
         # 30% chance don't insert all columns
-        if random.random() < 0.3:
-            # Select a random number of columns to insert (between 1 and all columns)
-            num_columns_to_insert = random.randint(1, len(tables[table_name]))
-            # Select random column indices to insert
-            column_indices = random.sample(range(len(tables[table_name])), num_columns_to_insert)
-            # Create the SQL statement for inserting the row
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join([tables[table_name][j] for j in column_indices])}) VALUES ({', '.join([str(row_i[j]) for j in column_indices])});\n"
+        # if random.random() < 0.3:
+        #     # Select a random number of columns to insert (between 1 and all columns)
+        #     num_columns_to_insert = random.randint(1, len(tables[table_name]))
+        #     # Select random column indices to insert
+        #     column_indices = random.sample(range(len(tables[table_name])), num_columns_to_insert)
+        #     # Create the SQL statement for inserting the row
+        #     sql_stmts += f"INSERT INTO {table_name} ({', '.join([tables[table_name][j] for j in column_indices])}) VALUES ({', '.join([str(row_i[j]) for j in column_indices])});\n"
         # 30% chance for SELECT statement
-        # elif random.random() < 0.3:
+        # if random.random() < 0.3:
         #     # TODO: add more complex SELECT statements
         #     selected_column = random.choice(tables[table_name])
         #     select_stmt = query.generateQuery(tables)
         #     sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) {select_stmt};\n"
         #     #print(sql_stmts)
-        else:
+        # else:
             # Create the SQL statement for inserting the row
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
+        sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
     return row_i, sql_stmts
 
 def generate_sqlite_table(table_number):

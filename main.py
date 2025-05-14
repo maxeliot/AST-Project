@@ -9,7 +9,7 @@ import os
 import re
 import csv
 
-NUMBER_OF_QUERIES = 2
+NUMBER_OF_QUERIES = 200
 COVERAGE_INTERVAL = NUMBER_OF_QUERIES // 10 if NUMBER_OF_QUERIES > 10 else 1
 
 def coverage(iteration):
@@ -147,7 +147,7 @@ if __name__ == "__main__":
             print()
 
 
-        print(result2)
+        #print(result2)
         if(result2[1] != ""):
             print(f"Error in query: {query}")
             print(f"Error message: {result2[1]}")
