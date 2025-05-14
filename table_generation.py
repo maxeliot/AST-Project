@@ -14,7 +14,8 @@ def generate_tables():
     tables = {} # Dictionary to store table names and their column names
     columns_tables = {}
     tables_rows = {} # Dictionary to store table names and their rows
-
+    sql_stmts = {}
+    primary_or_unique = {}
     # Generate tables and add their column names to the dictionary
     for i in range(num_tables):
         stmt, columns, column_names = generate_sqlite_table()
@@ -27,93 +28,147 @@ def generate_tables():
     for table_name, column_names in tables.items():
         num_rows = random.randint(1, 5)
         rows = []
+        sql_stmts[table_name] = ""  # Initialize the SQL statement for the table
         for i in range(num_rows):
-            row = {}
-            real_primary_key = []
-            text_primary_key = []
-            blob_primary_key = []
-            for j, column_definition in enumerate(columns_tables[table_name]):
-                # Generate a random value for each column
-                
-                column_constraints = column_definition.rsplit(' ')
-                data_type = column_constraints[1]
-                # if i == 0:
-                #     print(f"Column {j}: {column_definition}")
-                #     print(f"column type: {data_type}")
-                if data_type == "NULL":
-                    row[j] = "NULL"
-                # Check if the column has a NOT NULL constraint
-                if "NOT" not in column_constraints:
-                    if random.random() < 0.1:
-                        row[j] = "NULL"
-                if "PRIMARY" in column_constraints:
-                    # Generate a unique value for the primary key
-                    if data_type == "INTEGER":
-                        row[j] = i + 1
-                    elif data_type == "REAL":
-                        real = round(random.uniform(-100, 100), 2)
-                        while real in real_primary_key:
-                            real = round(random.uniform(-100, 100), 2)
-                        real_primary_key.append(real)
-                        row[j] = real
-                    elif data_type == "TEXT":
-                        text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
-                        while text in text_primary_key:
-                            text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
-                        text_primary_key.append(text)
-                        row[j] = text
-                    elif data_type == "BLOB":
-                        blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
-                        while blob in blob_primary_key:
-                            blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
-                        blob_primary_key.append(blob)
-                        row[j] = blob
-                elif "UNIQUE" in column_constraints and not row.get(j):
-                    # Generate a unique value for the UNIQUE column
-                    if data_type == "INTEGER":
-                        row[j] = i + 1
-                    elif data_type == "REAL":
-                        real = round(random.uniform(-100, 100), 2)
-                        while real in real_primary_key:
-                            real = round(random.uniform(-100, 100), 2)
-                        real_primary_key.append(real)
-                        row[j] = real
-                    elif data_type == "TEXT":
-                        text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
-                        while text in text_primary_key:
-                            text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
-                        text_primary_key.append(text)
-                        row[j] = text
-                    elif data_type == "BLOB":
-                        blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
-                        while blob in blob_primary_key:
-                            blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
-                        blob_primary_key.append(blob)
-                        row[j] = blob
-                # if "CHECK" in column_constraints:
-                # for now only maybe sets default value if not unique
-                # sets default value 25% of the time
-                elif "DEFAULT" in column_constraints:
-                    if random.random() < 0.25:
-                        if "COLLATE" not in column_constraints:     #f" {' '.join(constraints)}"
-                            default_index = column_constraints.index("DEFAULT") + 1
-                            row[j] = " ".join(column_constraints[default_index:len(column_constraints)])
-                        else:
-                            default_index = column_constraints.index("DEFAULT") + 1
-                            row[j] = " ".join(column_constraints[default_index:len(column_constraints) - 2])
-                if not row.get(j):
-                    if data_type == "INTEGER":
-                        row[j] = random.randint(-100, 100)
-                    elif data_type == "REAL":
-                        row[j] = round(random.uniform(-100, 100), 2)
-                    elif data_type == "TEXT":
-                        row[j] = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
-                    elif data_type == "BLOB":
-                        row[j] = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
-            rows.append(row)
+            row_i, sql_stmt = generate_row(table_name, columns_tables[table_name], rows, column_names)
+            rows.append(row_i)
+            sql_stmts[table_name] += sql_stmt
         tables_rows[table_name] = rows
-    return tables, tables_rows
-    
+        
+    return tables, tables_rows, sql_stmts
+
+def generate_row(table_name, columns, rows, column_names):
+    # Generate a random row
+    row_i = {}
+    real_primary_key = []
+    text_primary_key = []
+    blob_primary_key = []
+    primary_or_unique = False
+    sql_stmts = ""
+    for j, column_definition in enumerate(columns):
+        # Generate a random value for each column
+        
+        column_constraints = column_definition.rsplit(' ')
+        data_type = column_constraints[1]
+        # if i == 0:
+        #     print(f"Column {j}: {column_definition}")
+        #     print(f"column type: {data_type}")
+        if data_type == "NULL":
+            row_i[j] = "NULL"
+        # Check if the column has a NOT NULL constraint
+        if "NOT" not in column_constraints:
+            if random.random() < 0.1:
+                row_i[j] = "NULL"
+        if "PRIMARY" in column_constraints:
+            # Generate a unique value for the primary key
+            primary_or_unique = True
+            if data_type == "INTEGER":
+                row_i[j] = len(rows) + 1
+            elif data_type == "REAL":
+                real = round(random.uniform(-100, 100), 2)
+                real_primary_key = [row[j] for row in rows if row.get(j) is not None]
+                while real in real_primary_key:
+                    real = round(random.uniform(-100, 100), 2)
+                real_primary_key.append(real)
+                row_i[j] = real
+            elif data_type == "TEXT":
+                text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                text_primary_key = [row[j] for row in rows if row.get(j) is not None]
+                while text in text_primary_key:
+                    text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                text_primary_key.append(text)
+                row_i[j] = text
+            elif data_type == "BLOB":
+                blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                blob_primary_key = [row[j] for row in rows if row.get(j) is not None]
+                while blob in blob_primary_key:
+                    blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                blob_primary_key.append(blob)
+                row_i[j] = blob
+        elif "UNIQUE" in column_constraints and not row_i.get(j):
+            primary_or_unique = True
+            # Generate a unique value for the UNIQUE column
+            if data_type == "INTEGER":
+
+                row_i[j] = len(rows) + 1
+            elif data_type == "REAL":
+                real = round(random.uniform(-100, 100), 2)
+                real_primary_key = [row[j] for row in rows if row.get(j) is not None]
+                while real in real_primary_key:
+                    real = round(random.uniform(-100, 100), 2)
+                real_primary_key.append(real)
+                row_i[j] = real
+            elif data_type == "TEXT":
+                text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                text_primary_key = [row[j] for row in rows if row.get(j) is not None]
+                while text in text_primary_key:
+                    text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                text_primary_key.append(text)
+                row_i[j] = text
+            elif data_type == "BLOB":
+                blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                blob_primary_key = [row[j] for row in rows if row.get(j) is not None]
+                while blob in blob_primary_key:
+                    blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                blob_primary_key.append(blob)
+                row_i[j] = blob
+        # if "CHECK" in column_constraints:
+        # for now only maybe sets default value if not unique
+        # sets default value 25% of the time
+        elif "DEFAULT" in column_constraints:
+            if random.random() < 0.25:
+                if "COLLATE" not in column_constraints:     #f" {' '.join(constraints)}"
+                    default_index = column_constraints.index("DEFAULT") + 1
+                    row_i[j] = " ".join(column_constraints[default_index:len(column_constraints)])
+                else:
+                    default_index = column_constraints.index("DEFAULT") + 1
+                    row_i[j] = " ".join(column_constraints[default_index:len(column_constraints) - 2])
+        if not row_i.get(j):
+            if data_type == "INTEGER":
+                row_i[j] = random.randint(-100, 100)
+            elif data_type == "REAL":
+                row_i[j] = round(random.uniform(-100, 100), 2)
+            elif data_type == "TEXT":
+                row_i[j] = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+            elif data_type == "BLOB":
+                row_i[j] = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+    # Generate the SQL statement for inserting the row
+    # if one column has unique or primary key constraint, 
+    if len(rows) > 0 and primary_or_unique:
+        # 20% chance to use INSERT OR REPLACE
+        if random.random() < 0.2:
+            sql_stmts += f"REPLACE INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+        # 20% chance to use INSERT OR IGNORE
+        elif random.random() < 0.2:
+            sql_stmts += f"INSERT OR IGNORE INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+        # 20% chance to use INSERT OR ROLLBACK
+        elif random.random() < 0.2:
+            sql_stmts += f"INSERT OR ROLLBACK INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+        # 20% chance to use INSERT OR ABORT
+        elif random.random() < 0.2:
+            sql_stmts += f"INSERT OR ABORT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+        # 20% chance to use INSERT OR FAIL
+        elif random.random() < 0.2:
+            sql_stmts += f"INSERT OR FAIL INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+        else:
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+    else:
+        # 30% chance don't insert all columns
+        if random.random() < 0.3:
+            # Select a random number of columns to insert (between 1 and all columns)
+            num_columns_to_insert = random.randint(1, len(column_names))
+            # Select random column indices to insert
+            column_indices = random.sample(range(len(column_names)), num_columns_to_insert)
+            # Create the SQL statement for inserting the row
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join([column_names[j] for j in column_indices])}) VALUES ({', '.join([str(row_i[j]) for j in column_indices])});\n"
+        # 30% chance for SELECT statement
+        elif random.random() < 0.3:
+            # TODO: add more complex SELECT statements
+            selected_column = random.choice(column_names)
+            sql_stmts += f"SELECT * FROM {table_name} WHERE {selected_column} = {row_i[column_names.index(selected_column)]};\n"
+        else:
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+    return row_i, sql_stmts
 
 def generate_sqlite_table():
     """
@@ -228,13 +283,14 @@ if __name__ == "__main__":
     # sql_stmt, columns, column_names = generate_sqlite_table()
     # print(sql_stmt)
 
-    tables, tables_rows = generate_tables()
+    tables, tables_rows, sql_stmts = generate_tables()
     print("Tables and their columns:")
     for table_name, column_names in tables.items():
         print(f"{table_name}: {column_names} \n")
     print("\nTables and their rows:")
     for table_name, rows in tables_rows.items():
         print(f"{table_name}: {rows} \n")
+        print(sql_stmts[table_name] + "\n")
 
     pivot_rows = select_pivot_row(tables_rows)
     print("Pivot rows:")
