@@ -18,9 +18,11 @@ def generate_tables():
     sql_stmts = {}
     primary_or_unique = {}
     tables_stmts = {}
+    table_number = 0
     # Generate tables and add their column names to the dictionary
     for i in range(num_tables):
-        stmt, columns, column_names = generate_sqlite_table()
+        stmt, columns, column_names = generate_sqlite_table(table_number)
+        table_number += 1
         #print(stmt)
         tables_stmts["t" + str(i)] = stmt
         columns_tables["t" + str(i)] = columns
@@ -168,11 +170,12 @@ def generate_row(table_name, columns, rows, tables):
         elif random.random() < 0.3:
             # TODO: add more complex SELECT statements
             selected_column = random.choice(tables[table_name])
-            #sql_stmts += query.generateQuery()
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
+            select_stmt = query.generateQuery(tables)
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) {select_stmt};\n"
+            print(sql_stmts)
     return row_i, sql_stmts
 
-def generate_sqlite_table():
+def generate_sqlite_table(table_number):
     """
     Generate a SQLite CREATE TABLE statement for a table named 't0'
     with 1-5 columns of random types.
@@ -258,7 +261,7 @@ def generate_sqlite_table():
         columns.append(column_def)
     
     # Create the complete SQL statement
-    sql_statement = "DROP TABLE IF EXISTS t0; \n" f"CREATE TABLE t0 (\n    " + ",\n    ".join(columns) + "\n);"
+    sql_statement = "DROP TABLE IF EXISTS t" + f"{table_number}" + "; \n" f"CREATE TABLE t" + f"{table_number}" + " (\n    " + ",\n    ".join(columns) + "\n);"
     
     
     return sql_statement, columns, column_names
