@@ -9,8 +9,8 @@ import os
 import re
 import csv
 
-NUMBER_OF_QUERIES = 200
-COVERAGE_INTERVAL = NUMBER_OF_QUERIES // 10
+NUMBER_OF_QUERIES = 2
+COVERAGE_INTERVAL = NUMBER_OF_QUERIES // 10 if NUMBER_OF_QUERIES > 10 else 1
 
 def coverage(iteration):
     """
@@ -49,10 +49,12 @@ def cleanup_gcda_files():
         os.remove(gcda_file)
 
 
-def measure_performance_generation(number_queries, schema):
+def measure_performance_generation(number_queries):
     start_time = time.time()
 
+
     for i in range(number_queries):
+        schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
         query_generation.generateQuery(schema)
 
     end_time = time.time()
@@ -66,17 +68,19 @@ def measure_performance_generation(number_queries, schema):
         writer = csv.writer(file)
         writer.writerow([queries_per_minute])
 
-def measure_performance_all(number_queries, schema):
+def measure_performance_all(number_queries):
     start_time = time.time()
 
     for i in range(number_queries):
+        schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
+        sql_query = table_generation.generate_sql_tables_query(sql_stmts, tables_stmts)
+        result = sqlu.run_sqlite_query(sql_query, sqlu.SQLITE_3_26_0)
+
         query = query_generation.generateQuery(schema)
 
         result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
         rows_returned = result[0].split("\n")
 
-        #print(f"Query {i}: {query}")
-        #print(schema)
         result2 = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
         rows_returned2 = result2[0].split("\n")
 
@@ -85,7 +89,7 @@ def measure_performance_all(number_queries, schema):
     end_time = time.time()
 
     queries_per_minute = int((number_queries / (end_time - start_time)) * 60)
-    print(f"Queries generated per minute: {queries_per_minute}")
+    print(f"Queries generated and executed per minute: {queries_per_minute}")
 
     # Output the performance metrics to a CSV file
     csv_file = "/workspace/results/perf-generation-execution.csv"
@@ -102,21 +106,10 @@ if __name__ == "__main__":
         f.write("")
     with open("/workspace/results/coverage.csv", "w") as f:
         f.write("")
-
-    # # Example schema
-    # schema = {
-    #     "t0": ["c0", "c1"],
-    #     "t1": ["c0"]
-    # }
-
-    schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
-    sql_query = table_generation.generate_sql_tables_query(sql_stmts, tables_stmts)
-    #print("TABLE GENERATION QUERY: " + sql_query)
-    result = sqlu.run_sqlite_query(sql_query, sqlu.SQLITE_3_26_0)
     
 
-    measure_performance_generation(NUMBER_OF_QUERIES, schema)
-    measure_performance_all(NUMBER_OF_QUERIES, schema)
+    measure_performance_generation(NUMBER_OF_QUERIES)
+    measure_performance_all(NUMBER_OF_QUERIES)
 
 
     # Cleanup .gcda files before running the query
@@ -124,11 +117,17 @@ if __name__ == "__main__":
     
 
     for i in range(NUMBER_OF_QUERIES):
+        schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
+        sql_query = table_generation.generate_sql_tables_query(sql_stmts, tables_stmts)
+
+        result = sqlu.run_sqlite_query(sql_query, sqlu.SQLITE_3_26_0)
+
         query = query_generation.generateQuery(schema)
 
         # Log the generated query to a file
+        cleaned_sql_query = sql_query.replace("\n", "")
         with open("/workspace/results/queries.txt", "a") as f:
-            f.write(f"{query}\n")
+            f.write(f"{cleaned_sql_query}{query}\n")
 
         result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
         rows_returned = result[0].split("\n")
@@ -145,6 +144,13 @@ if __name__ == "__main__":
             print("Rows returned on version 3.49.2:")
             for row in rows_returned2:
                 print(row)
+            print()
+
+
+        print(result2)
+        if(result2[1] != ""):
+            print(f"Error in query: {query}")
+            print(f"Error message: {result2[1]}")
             print()
 
         if(i % COVERAGE_INTERVAL == 0):
