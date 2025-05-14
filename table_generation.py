@@ -77,17 +77,17 @@ def generate_row(table_name, columns, rows, tables):
                 real_primary_key.append(real)
                 row_i[j] = real
             elif data_type == "TEXT":
-                text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                text = "'" + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10))) + "'"
                 text_primary_key = [row[j] for row in rows if row.get(j) is not None]
                 while text in text_primary_key:
-                    text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                    text = "'" + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10))) + "'"
                 text_primary_key.append(text)
                 row_i[j] = text
             elif data_type == "BLOB":
-                blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                blob = "'" + str([random.getrandbits(8) for _ in range(random.randint(1, 10))]) + "'"
                 blob_primary_key = [row[j] for row in rows if row.get(j) is not None]
                 while blob in blob_primary_key:
-                    blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                    blob = "'" + str([random.getrandbits(8) for _ in range(random.randint(1, 10))]) + "'"
                 blob_primary_key.append(blob)
                 row_i[j] = blob
         elif "UNIQUE" in column_constraints and not row_i.get(j):
@@ -104,17 +104,17 @@ def generate_row(table_name, columns, rows, tables):
                 real_primary_key.append(real)
                 row_i[j] = real
             elif data_type == "TEXT":
-                text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                text = "'" + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10))) + "'"
                 text_primary_key = [row[j] for row in rows if row.get(j) is not None]
                 while text in text_primary_key:
-                    text = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                    text = "'" + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10))) + "'"
                 text_primary_key.append(text)
                 row_i[j] = text
             elif data_type == "BLOB":
-                blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                blob = "'" + str([random.getrandbits(8) for _ in range(random.randint(1, 10))]) + "'"
                 blob_primary_key = [row[j] for row in rows if row.get(j) is not None]
                 while blob in blob_primary_key:
-                    blob = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                    blob ="'" + str([random.getrandbits(8) for _ in range(random.randint(1, 10))]) + "'"
                 blob_primary_key.append(blob)
                 row_i[j] = blob
         # if "CHECK" in column_constraints:
@@ -134,9 +134,9 @@ def generate_row(table_name, columns, rows, tables):
             elif data_type == "REAL":
                 row_i[j] = round(random.uniform(-100, 100), 2)
             elif data_type == "TEXT":
-                row_i[j] = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10)))
+                row_i[j] = "'" + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 10))) + "'"
             elif data_type == "BLOB":
-                row_i[j] = bytes(random.getrandbits(8) for _ in range(random.randint(1, 10)))
+                row_i[j] = "'" + str([random.getrandbits(8) for _ in range(random.randint(1, 10))]) + "'"
     # Generate the SQL statement for inserting the row
     # if one column has unique or primary key constraint, 
     if len(rows) > 0 and primary_or_unique:
@@ -167,12 +167,15 @@ def generate_row(table_name, columns, rows, tables):
             # Create the SQL statement for inserting the row
             sql_stmts += f"INSERT INTO {table_name} ({', '.join([tables[table_name][j] for j in column_indices])}) VALUES ({', '.join([str(row_i[j]) for j in column_indices])});\n"
         # 30% chance for SELECT statement
-        elif random.random() < 0.3:
-            # TODO: add more complex SELECT statements
-            selected_column = random.choice(tables[table_name])
-            select_stmt = query.generateQuery(tables)
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) {select_stmt};\n"
-            #print(sql_stmts)
+        # elif random.random() < 0.3:
+        #     # TODO: add more complex SELECT statements
+        #     selected_column = random.choice(tables[table_name])
+        #     select_stmt = query.generateQuery(tables)
+        #     sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) {select_stmt};\n"
+        #     #print(sql_stmts)
+        else:
+            # Create the SQL statement for inserting the row
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
     return row_i, sql_stmts
 
 def generate_sqlite_table(table_number):
