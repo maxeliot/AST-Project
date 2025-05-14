@@ -9,6 +9,8 @@ import os
 import re
 import csv
 
+NUMBER_OF_QUERIES = 100
+
 def coverage(iteration):
     """
     Run gcov, extract the coverage percentage, and append it to a CSV file.
@@ -37,6 +39,7 @@ def coverage(iteration):
         writer = csv.writer(file)
         writer.writerow([iteration, coverage_percentage])
 
+
 def cleanup_gcda_files():
     """
     Remove all .gcda files to prevent gcov profiling errors.
@@ -57,28 +60,33 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    for i in range(100):
+    for i in range(NUMBER_OF_QUERIES):
         query = query_generation.generateQuery(schema)
         #print("Generated Query: \n", query, "\n", sep="")
+
+        # Log the generated query to a file
+        with open("/workspace/results/queries.txt", "a") as f:
+            f.write(f"{query}\n")
 
         result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
 
         rows_returned = result[0].split("\n")
-        #print("Rows Returned on version 3.26.0:")
-        #for row in rows_returned:
-        #    print(row)
-        #print()
 
         result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
 
         rows_returned2 = result[0].split("\n")
-        #print("Rows Returned on version 3.49.2:")
-        #for row in rows_returned2:
-        #    print(row)
-        #print()
 
         #print(f"Results on different versions match (order independent): {set(rows_returned2) == set(rows_returned)}")
-        print(set(rows_returned2) == set(rows_returned))
+        if set(rows_returned2) != set(rows_returned):
+            print(f"Results on different versions do not match (order independent): {set(rows_returned2) != set(rows_returned)}")
+            print("Rows returned on version 3.26.0:")
+            for row in rows_returned:
+                print(row)
+            print()
+            print("Rows returned on version 3.49.2:")
+            for row in rows_returned2:
+                print(row)
+            print()
 
         if(i % 10 == 0):
             coverage(i)
@@ -86,5 +94,15 @@ if __name__ == "__main__":
 
 
     print(f"Time taken to run the query: {time.time() - start_time} seconds")
+
+    # Calculate number of queries generated per minute
+    queries_per_minute = (NUMBER_OF_QUERIES / (time.time() - start_time)) * 60
+    print(f"Queries generated per minute: {queries_per_minute}")
+
+    # Output the performance metrics to a CSV file
+    csv_file = "/workspace/results/performance.csv"
+    with open(csv_file, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([NUMBER_OF_QUERIES, time.time() - start_time, queries_per_minute])
 
     subprocess.run(["/workspace/measuring/coverage.sh"])
