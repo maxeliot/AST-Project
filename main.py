@@ -5,6 +5,7 @@ import subprocess
 import table_generation
 import glob
 import os
+import table_generation
 
 import re
 import csv
@@ -91,6 +92,7 @@ def measure_performance_all(number_queries, schema):
         writer = csv.writer(file)
         writer.writerow([queries_per_minute])
 
+
         
     
 if __name__ == "__main__":
@@ -100,11 +102,17 @@ if __name__ == "__main__":
     with open("/workspace/results/coverage.csv", "w") as f:
         f.write("")
 
-    # Example schema
-    schema = {
-        "t0": ["c0", "c1"],
-        "t1": ["c0"]
-    }
+    # # Example schema
+    # schema = {
+    #     "t0": ["c0", "c1"],
+    #     "t1": ["c0"]
+    # }
+
+    schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
+    sql_query = table_generation.generate_sql_tables_query(schema, sql_stmts, tables_stmts)
+
+    result = sqlu.run_sqlite_query(sql_query, sqlu.SQLITE_3_26_0)
+    print(result)
 
     measure_performance_generation(NUMBER_OF_QUERIES, schema)
     measure_performance_all(NUMBER_OF_QUERIES, schema)
