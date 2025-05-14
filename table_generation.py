@@ -172,7 +172,7 @@ def generate_row(table_name, columns, rows, tables):
             selected_column = random.choice(tables[table_name])
             select_stmt = query.generateQuery(tables)
             sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) {select_stmt};\n"
-            print(sql_stmts)
+            #print(sql_stmts)
     return row_i, sql_stmts
 
 def generate_sqlite_table(table_number):
@@ -283,7 +283,7 @@ def select_pivot_row(tables_rows):
         pivot_rows[table_name] = row
     return pivot_rows
 
-def generate_sql_tables_query(tables, sql_stmts, tables_stmts):
+def generate_sql_tables_query(sql_stmts, tables_stmts):
     """
     Generate a SQL query to create the tables and insert the rows.
     
@@ -320,6 +320,6 @@ if __name__ == "__main__":
     for table_name, row in pivot_rows.items():
         print(f"{table_name}: {row} \n")
     
-    sql_query = generate_sql_tables_query(tables, sql_stmts, tables_stmts)
+    sql_query = generate_sql_tables_query(sql_stmts, tables_stmts)
     print("SQL Query to create tables and insert rows:")
     print(sql_query)

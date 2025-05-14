@@ -5,7 +5,6 @@ import subprocess
 import table_generation
 import glob
 import os
-import table_generation
 
 import re
 import csv
@@ -76,6 +75,8 @@ def measure_performance_all(number_queries, schema):
         result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
         rows_returned = result[0].split("\n")
 
+        #print(f"Query {i}: {query}")
+        #print(schema)
         result2 = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
         rows_returned2 = result2[0].split("\n")
 
@@ -109,10 +110,10 @@ if __name__ == "__main__":
     # }
 
     schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
-    sql_query = table_generation.generate_sql_tables_query(schema, sql_stmts, tables_stmts)
-
+    sql_query = table_generation.generate_sql_tables_query(sql_stmts, tables_stmts)
+    #print("TABLE GENERATION QUERY: " + sql_query)
     result = sqlu.run_sqlite_query(sql_query, sqlu.SQLITE_3_26_0)
-    print(result)
+    
 
     measure_performance_generation(NUMBER_OF_QUERIES, schema)
     measure_performance_all(NUMBER_OF_QUERIES, schema)
