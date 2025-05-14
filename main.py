@@ -46,11 +46,35 @@ def cleanup_gcda_files():
     """
     for gcda_file in glob.glob("/home/test/sqlite/*.gcda"):
         os.remove(gcda_file)
+
+
+def measure_performance(number_queries, schema):
+    start_time = time.time()
+
+    for i in range(number_queries):
+        query_generation.generateQuery(schema)
+
+    end_time = time.time()
+
+    queries_per_minute = int((number_queries / (end_time - start_time)) * 60)
+    print(f"Queries generated per minute: {queries_per_minute}")
+
+    # Output the performance metrics to a CSV file
+    csv_file = "/workspace/results/performance.csv"
+    with open(csv_file, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([queries_per_minute])
+
         
     
 if __name__ == "__main__":
-    # Cleanup .gcda files before running the query
-    cleanup_gcda_files()
+    # Clear the log files
+    with open("/workspace/results/queries.txt", "w") as f:
+        f.write("")
+    with open("/workspace/results/coverage.csv", "w") as f:
+        f.write("")
+    with open("/workspace/results/performance.csv", "w") as f:
+        f.write("Queries Generated Per Minute\n")
 
     # Example schema
     schema = {
@@ -58,25 +82,27 @@ if __name__ == "__main__":
         "t1": ["c0"]
     }
 
-    start_time = time.time()
+    measure_performance(NUMBER_OF_QUERIES, schema)
+
+
+    # Cleanup .gcda files before running the query
+    cleanup_gcda_files()
+    
+    
 
     for i in range(NUMBER_OF_QUERIES):
         query = query_generation.generateQuery(schema)
-        #print("Generated Query: \n", query, "\n", sep="")
 
         # Log the generated query to a file
         with open("/workspace/results/queries.txt", "a") as f:
             f.write(f"{query}\n")
 
         result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_26_0)
-
         rows_returned = result[0].split("\n")
 
-        result = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
+        result2 = sqlu.run_sqlite_query(query, sqlu.SQLITE_3_49_2)
+        rows_returned2 = result2[0].split("\n")
 
-        rows_returned2 = result[0].split("\n")
-
-        #print(f"Results on different versions match (order independent): {set(rows_returned2) == set(rows_returned)}")
         if set(rows_returned2) != set(rows_returned):
             print(f"Results on different versions do not match (order independent): {set(rows_returned2) != set(rows_returned)}")
             print("Rows returned on version 3.26.0:")
@@ -90,19 +116,6 @@ if __name__ == "__main__":
 
         if(i % 10 == 0):
             coverage(i)
-
-
-
-    print(f"Time taken to run the query: {time.time() - start_time} seconds")
-
-    # Calculate number of queries generated per minute
-    queries_per_minute = (NUMBER_OF_QUERIES / (time.time() - start_time)) * 60
-    print(f"Queries generated per minute: {queries_per_minute}")
-
-    # Output the performance metrics to a CSV file
-    csv_file = "/workspace/results/performance.csv"
-    with open(csv_file, mode="a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow([NUMBER_OF_QUERIES, time.time() - start_time, queries_per_minute])
+    
 
     subprocess.run(["/workspace/measuring/coverage.sh"])

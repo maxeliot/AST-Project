@@ -1,10 +1,9 @@
 import re
 import csv
-import query_generation
 import sqlite_utils as sqlu
-#from sqlparse import parse  # Install sqlparse: pip install sqlparse
 
-NUMBER_OF_QUERIES = 10
+CLAUSES = ["SELECT", "JOIN", "WHERE", "GROUP BY", "ORDER BY", "HAVING", "INSERT", "UPDATE", "DELETE",
+               "CREATE TABLE", "DROP TABLE", "ALTER TABLE", "INDEX", "VIEW", "NOT"]
 
 def analyze_query(query):
     """
@@ -17,8 +16,7 @@ def analyze_query(query):
         dict: A dictionary containing the analysis results.
     """
     # Frequency of SQL clauses
-    clauses = ["SELECT", "JOIN", "WHERE", "GROUP BY", "ORDER BY", "HAVING", "INSERT", "UPDATE", "DELETE",
-              "CREATE TABLE", "DROP TABLE", "ALTER TABLE", "INDEX", "VIEW"]
+    clauses = CLAUSES
     clause_counts = {clause: len(re.findall(rf"\b{clause}\b", query, re.IGNORECASE)) for clause in clauses}
 
     # Expression depth (count nested parentheses)
@@ -48,27 +46,26 @@ def is_query_valid(query, sqlite_version):
     Returns:
         bool: True if the query is valid, False otherwise.
     """
-    #TODO this is not the right way to check for query validity
-    try:
-        sqlu.run_sqlite_query(query, sqlite_version)
-        return True
-    except Exception:
-        return False
+    return sqlu.run_sqlite_query(query, sqlite_version)[1] == ""
 
-def collect_statistics(schema, num_queries):
+def collect_statistics(schema):
     """
-    Generate SQL queries, analyze them, and collect statistics.
+    Analyze SQL queries from a file and collect statistics.
 
     Args:
-        schema (dict): The database schema.
-        num_queries (int): The number of queries to generate.
+        schema (dict): The database schema (not used in this version).
+        num_queries (int): The number of queries to analyze.
     """
     valid_queries = 0
     invalid_queries = 0
-    statistics = []
+    total_clause_counts = {clause: 0 for clause in CLAUSES}
 
-    for i in range(num_queries):
-        query = query_generation.generateQuery(schema)
+    # Read queries from the file
+    queries_file = "/workspace/results/queries.txt"
+    with open(queries_file, "r") as file:
+        queries = [line.strip() for line in file if line.strip()]
+
+    for query in queries:
         analysis = analyze_query(query)
 
         # Check query validity
@@ -77,33 +74,27 @@ def collect_statistics(schema, num_queries):
         else:
             invalid_queries += 1
 
-        # Collect statistics
-        statistics.append({
-            "query": query,
-            "clause_counts": analysis["clause_counts"],
-            "expression_depth": analysis["expression_depth"],
-            "valid": is_query_valid(query, sqlu.SQLITE_3_26_0)
-        })
+        # Sum up clause counts
+        for clause, count in analysis["clause_counts"].items():
+            total_clause_counts[clause] += count
 
-    # Output statistics to a CSV file
-    csv_file = "/workspace/results/query_statistics.csv"
+    # Output clause counts to a CSV file
+    csv_file = "/workspace/results/clause_counts.csv"
     with open(csv_file, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Query", "SELECT", "JOIN", "WHERE", "GROUP BY", "Expression Depth", "Valid"])
-        for stat in statistics:
-            writer.writerow([
-                stat["query"],
-                stat["clause_counts"]["SELECT"],
-                stat["clause_counts"]["JOIN"],
-                stat["clause_counts"]["WHERE"],
-                stat["clause_counts"]["GROUP BY"],
-                stat["expression_depth"],
-                stat["valid"]
-            ])
+        writer.writerow(["Clause", "Count"])
+        for clause, count in total_clause_counts.items():
+            writer.writerow([clause, count])
 
     # Print validity ratio
     print(f"Valid Queries: {valid_queries}, Invalid Queries: {invalid_queries}")
     print(f"Validity Ratio: {valid_queries / (valid_queries + invalid_queries):.2f}")
+
+
+    # Log the validity ratio
+    with open("/workspace/results/validity_ratio.txt", mode="w") as file:
+        file.write(f"Validity Ratio: {valid_queries / (valid_queries + invalid_queries):.2f}\n")
+        
 
 # Example usage
 if __name__ == "__main__":
@@ -111,4 +102,4 @@ if __name__ == "__main__":
         "t0": ["c0", "c1"],
         "t1": ["c0"]
     }
-    collect_statistics(schema, NUMBER_OF_QUERIES)
+    collect_statistics(schema)
