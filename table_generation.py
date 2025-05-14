@@ -1,6 +1,7 @@
 import random
 import string
 import sqlite_utils as sqlu
+import query_generation as query
 
 def generate_tables():
 
@@ -16,10 +17,12 @@ def generate_tables():
     tables_rows = {} # Dictionary to store table names and their rows
     sql_stmts = {}
     primary_or_unique = {}
+    tables_stmts = {}
     # Generate tables and add their column names to the dictionary
     for i in range(num_tables):
         stmt, columns, column_names = generate_sqlite_table()
-        print(stmt)
+        #print(stmt)
+        tables_stmts["t" + str(i)] = stmt
         columns_tables["t" + str(i)] = columns
         tables["t" + str(i)] = column_names
 
@@ -30,14 +33,14 @@ def generate_tables():
         rows = []
         sql_stmts[table_name] = ""  # Initialize the SQL statement for the table
         for i in range(num_rows):
-            row_i, sql_stmt = generate_row(table_name, columns_tables[table_name], rows, column_names)
+            row_i, sql_stmt = generate_row(table_name, columns_tables[table_name], rows, tables)
             rows.append(row_i)
             sql_stmts[table_name] += sql_stmt
         tables_rows[table_name] = rows
         
-    return tables, tables_rows, sql_stmts
+    return tables, tables_rows, sql_stmts, tables_stmts
 
-def generate_row(table_name, columns, rows, column_names):
+def generate_row(table_name, columns, rows, tables):
     # Generate a random row
     row_i = {}
     real_primary_key = []
@@ -137,37 +140,36 @@ def generate_row(table_name, columns, rows, column_names):
     if len(rows) > 0 and primary_or_unique:
         # 20% chance to use INSERT OR REPLACE
         if random.random() < 0.2:
-            sql_stmts += f"REPLACE INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            sql_stmts += f"REPLACE INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
         # 20% chance to use INSERT OR IGNORE
         elif random.random() < 0.2:
-            sql_stmts += f"INSERT OR IGNORE INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            sql_stmts += f"INSERT OR IGNORE INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
         # 20% chance to use INSERT OR ROLLBACK
         elif random.random() < 0.2:
-            sql_stmts += f"INSERT OR ROLLBACK INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            sql_stmts += f"INSERT OR ROLLBACK INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
         # 20% chance to use INSERT OR ABORT
         elif random.random() < 0.2:
-            sql_stmts += f"INSERT OR ABORT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            sql_stmts += f"INSERT OR ABORT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
         # 20% chance to use INSERT OR FAIL
         elif random.random() < 0.2:
-            sql_stmts += f"INSERT OR FAIL INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            sql_stmts += f"INSERT OR FAIL INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
         else:
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
     else:
         # 30% chance don't insert all columns
         if random.random() < 0.3:
             # Select a random number of columns to insert (between 1 and all columns)
-            num_columns_to_insert = random.randint(1, len(column_names))
+            num_columns_to_insert = random.randint(1, len(tables[table_name]))
             # Select random column indices to insert
-            column_indices = random.sample(range(len(column_names)), num_columns_to_insert)
+            column_indices = random.sample(range(len(tables[table_name])), num_columns_to_insert)
             # Create the SQL statement for inserting the row
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join([column_names[j] for j in column_indices])}) VALUES ({', '.join([str(row_i[j]) for j in column_indices])});\n"
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join([tables[table_name][j] for j in column_indices])}) VALUES ({', '.join([str(row_i[j]) for j in column_indices])});\n"
         # 30% chance for SELECT statement
         elif random.random() < 0.3:
             # TODO: add more complex SELECT statements
-            selected_column = random.choice(column_names)
-            sql_stmts += f"SELECT * FROM {table_name} WHERE {selected_column} = {row_i[column_names.index(selected_column)]};\n"
-        else:
-            sql_stmts += f"INSERT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join([str(row_i[j]) for j in range(len(column_names))])});\n"
+            selected_column = random.choice(tables[table_name])
+            #sql_stmts += query.generateQuery()
+            sql_stmts += f"INSERT INTO {table_name} ({', '.join(tables[table_name])}) VALUES ({', '.join([str(row_i[j]) for j in range(len(tables[table_name]))])});\n"
     return row_i, sql_stmts
 
 def generate_sqlite_table():
@@ -278,12 +280,30 @@ def select_pivot_row(tables_rows):
         pivot_rows[table_name] = row
     return pivot_rows
 
+def generate_sql_tables_query(tables, sql_stmts, tables_stmts):
+    """
+    Generate a SQL query to create the tables and insert the rows.
+    
+    Args:
+        tables (dict): Dictionary containing table names and their columns.
+        sql_stmts (dict): Dictionary containing table names and their SQL statements.
+        
+    Returns:
+        str: A SQL query to create the tables and insert the rows.
+    """
+    sql_query = ""
+    for stmt in tables_stmts.values():
+        sql_query += stmt + "\n"
+    for stmt in sql_stmts.values():
+        sql_query += stmt + "\n"
+    return sql_query
+
 # Example usage
 if __name__ == "__main__":
     # sql_stmt, columns, column_names = generate_sqlite_table()
     # print(sql_stmt)
 
-    tables, tables_rows, sql_stmts = generate_tables()
+    tables, tables_rows, sql_stmts, tables_stmts = generate_tables()
     print("Tables and their columns:")
     for table_name, column_names in tables.items():
         print(f"{table_name}: {column_names} \n")
@@ -296,3 +316,7 @@ if __name__ == "__main__":
     print("Pivot rows:")
     for table_name, row in pivot_rows.items():
         print(f"{table_name}: {row} \n")
+    
+    sql_query = generate_sql_tables_query(tables, sql_stmts, tables_stmts)
+    print("SQL Query to create tables and insert rows:")
+    print(sql_query)
