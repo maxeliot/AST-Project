@@ -9,7 +9,7 @@ import os
 import re
 import csv
 
-NUMBER_OF_QUERIES = 200
+NUMBER_OF_QUERIES = 50
 COVERAGE_INTERVAL = NUMBER_OF_QUERIES // 10 if NUMBER_OF_QUERIES > 10 else 1
 
 def coverage(iteration):

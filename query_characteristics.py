@@ -2,9 +2,9 @@ import re
 import csv
 import sqlite_utils as sqlu
 
-CLAUSES = ["SELECT", "JOIN", "WHERE", "GROUP BY", "ORDER BY", "HAVING", "INSERT", "UPDATE", "DELETE",
-               "CREATE TABLE", "DROP TABLE", "ALTER TABLE", "INDEX", "VIEW", "NOT", "ABS", "LENGTH", "LOWER", "UPPER", "COALESCE",
-               "CASE WHEN", "BETWEEN", "IN", "LIKE", "EXISTS", "UNION", "INTERSECT", "EXCEPT",]
+CLAUSES = ["SELECT", "JOIN", "WHERE", "INSERT",
+               "CREATE TABLE", "DROP TABLE", "INDEX", "VIEW", "NOT", "ABS", "LENGTH", "LOWER", "UPPER", "COALESCE",
+               "CASE WHEN", "BETWEEN", "IN", "LIKE"]
 
 def analyze_query(query):
     """
@@ -47,6 +47,7 @@ def collect_statistics():
     valid_queries = 0
     invalid_queries = 0
     total_clause_counts = {clause: 0 for clause in CLAUSES}
+    expression_depth_counts = {}
 
     # Read queries from the file
     queries_file = "/workspace/results/queries.txt"
@@ -57,7 +58,6 @@ def collect_statistics():
         analysis = analyze_query(query)
 
         # Check query validity
-        #if is_query_valid(query, sqlu.SQLITE_3_49_2):
         if is_query_valid(query, sqlu.SQLITE_3_26_0):
             valid_queries += 1
         else:
@@ -67,6 +67,13 @@ def collect_statistics():
         # Sum up clause counts
         for clause, count in analysis["clause_counts"].items():
             total_clause_counts[clause] += count
+
+        # Track expression depth counts
+        depth = analysis["expression_depth"]
+        if depth in expression_depth_counts:
+            expression_depth_counts[depth] += 1
+        else:
+            expression_depth_counts[depth] = 1
 
     total_queries = valid_queries + invalid_queries
 
@@ -78,6 +85,14 @@ def collect_statistics():
         writer.writerow(["Total Queries", total_queries])
         for clause, count in total_clause_counts.items():
             writer.writerow([clause, count])
+
+    # Output expression depth counts to a CSV file
+    depth_csv_file = "/workspace/results/expression_depth_counts.csv"
+    with open(depth_csv_file, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Expression Depth", "Query Count"])
+        for depth, count in sorted(expression_depth_counts.items()):
+            writer.writerow([depth, count])
 
     # Print validity ratio
     print(f"Valid Queries: {valid_queries}, Invalid Queries: {invalid_queries}")

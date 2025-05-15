@@ -3,7 +3,7 @@ import sqlite_utils as sqlu
 import subprocess
 
 
-MAX_DEPTH = 3
+MAX_DEPTH = 10
 
 def generate_literal():
     kind = random.choice(["int", "text", "null"])
