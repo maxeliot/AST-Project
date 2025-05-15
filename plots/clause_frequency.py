@@ -1,8 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Navigate to the results directory
+results_dir = os.path.join(current_dir, "../results")
 
 # Load the CSV file
-csv_path = "../results/clause_counts.csv"  # Adjust path if necessary
+csv_path = os.path.join(results_dir, "clause_counts.csv")
 data = pd.read_csv(csv_path)
 
 # Calculate percentages
@@ -25,6 +31,6 @@ plt.gca().invert_yaxis()  # Invert y-axis to have the highest frequency at the t
 plt.tight_layout()
 
 # Save the plot
-output_path = "../plots/clause_frequency_histogram.png"  # Adjust path if necessary
+output_path = os.path.join(current_dir, "clause_frequency_histogram.png")
 plt.savefig(output_path)
 plt.show()

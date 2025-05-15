@@ -9,7 +9,7 @@ import os
 import re
 import csv
 
-NUMBER_OF_QUERIES = 50
+NUMBER_OF_QUERIES = 200
 COVERAGE_INTERVAL = NUMBER_OF_QUERIES // 10 if NUMBER_OF_QUERIES > 10 else 1
 
 def coverage(iteration):
@@ -60,7 +60,6 @@ def measure_performance_generation(number_queries):
     end_time = time.time()
 
     queries_per_minute = int((number_queries / (end_time - start_time)) * 60)
-    print(f"Queries generated per minute: {queries_per_minute}")
 
     # Output the performance metrics to a CSV file
     csv_file = "/workspace/results/perf-generation-only.csv"
@@ -89,7 +88,6 @@ def measure_performance_all(number_queries):
     end_time = time.time()
 
     queries_per_minute = int((number_queries / (end_time - start_time)) * 60)
-    print(f"Queries generated and executed per minute: {queries_per_minute}")
 
     # Output the performance metrics to a CSV file
     csv_file = "/workspace/results/perf-generation-execution.csv"
@@ -107,9 +105,9 @@ if __name__ == "__main__":
     with open("/workspace/results/coverage.csv", "w") as f:
         f.write("")
     
-
-    measure_performance_generation(NUMBER_OF_QUERIES)
-    measure_performance_all(NUMBER_OF_QUERIES)
+    for i in range(10):
+        measure_performance_generation(NUMBER_OF_QUERIES)
+        measure_performance_all(NUMBER_OF_QUERIES)
 
 
     # Cleanup .gcda files before running the query

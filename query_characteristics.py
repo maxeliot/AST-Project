@@ -3,8 +3,8 @@ import csv
 import sqlite_utils as sqlu
 
 CLAUSES = ["SELECT", "JOIN", "WHERE", "INSERT",
-               "CREATE TABLE", "DROP TABLE", "INDEX", "VIEW", "NOT", "ABS", "LENGTH", "LOWER", "UPPER", "COALESCE",
-               "CASE WHEN", "BETWEEN", "IN", "LIKE"]
+            "CREATE TABLE", "DROP TABLE", "INDEX", "VIEW", "NOT", "ABS", "LENGTH", "LOWER", "UPPER", "COALESCE",
+            "CASE WHEN", "BETWEEN", "IN", "LIKE", "PRIMARY KEY", "UNIQUE", "DEFAULT", "ABORT", "DISTINCT"]
 
 def analyze_query(query):
     """
