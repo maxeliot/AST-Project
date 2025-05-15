@@ -12,7 +12,7 @@ SQLITE_3_26_0 = "/home/test/sqlite/sqlite3" # Use this path as it allows for cov
 SQLITE_3_39_4 = "/usr/bin/sqlite3-3.39.4"
 SQLITE_3_49_2 = "/usr/bin/sqlite3-3.49.2"
 
-DB_PATH = "test.db"
+DB_PATH = ":memory:"
 
 
 
