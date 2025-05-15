@@ -39,7 +39,16 @@ def generate_tables():
             rows.append(row_i)
             sql_stmts[table_name] += sql_stmt
         tables_rows[table_name] = rows
-        
+    
+    # Generate a random number of views for each table
+    for table_name in tables.keys():
+        if random.random() < 0.5:
+            view_stmt = generate_view(table_name, tables)
+            sql_stmts[table_name] += view_stmt + "\n"
+        # Generate a random number of indexes for each table
+        if random.random() < 0.5:
+            index_stmt = generate_index(table_name, tables)
+            sql_stmts[table_name] += index_stmt + "\n"        
     return tables, tables_rows, sql_stmts, tables_stmts
 
 def generate_row(table_name, columns, rows, tables):
@@ -90,17 +99,17 @@ def generate_row(table_name, columns, rows, tables):
                     blob = "'" + str([random.getrandbits(8) for _ in range(random.randint(1, 10))]) + "'"
                 blob_primary_key.append(blob)
                 row_i[j] = blob
-        elif "UNIQUE" in column_constraints and not row_i.get(j):
+        elif "UNIQUE" in column_constraints:
             primary_or_unique = True
             # Generate a unique value for the UNIQUE column
             if data_type == "INTEGER":
 
                 row_i[j] = len(rows) + 1
             elif data_type == "REAL":
-                real = round(random.uniform(-100, 100), 2)
+                real = random.uniform(-100, 100)
                 real_primary_key = [row[j] for row in rows if row.get(j) is not None]
                 while real in real_primary_key:
-                    real = round(random.uniform(-100, 100), 2)
+                    real = random.uniform(-100, 100)
                 real_primary_key.append(real)
                 row_i[j] = real
             elif data_type == "TEXT":
@@ -241,7 +250,7 @@ def generate_sqlite_table(table_number):
         #     #     constraints.append(f"CHECK({column_name} >= 0)")
             
         # 20% chance to add DEFAULT value (appropriate for the data type)
-        if random.random() < 0.2 and data_type != "NULL":
+        if random.random() < 0.2 and data_type != "NULL" and "UNIQUE" not in constraints and "PRIMARY KEY" not in constraints:
             if data_type == "INTEGER":
                 constraints.append(f"DEFAULT {random.randint(-100, 100)}")
             elif data_type == "REAL":
@@ -269,22 +278,81 @@ def generate_sqlite_table(table_number):
     
     return sql_statement, columns, column_names
 
-def select_pivot_row(tables_rows):
+# def select_pivot_row(tables_rows):
+#     """
+#     Select a random row from the given tables_rows dictionary.
+    
+#     Args:
+#         tables_rows (dict): Dictionary containing table names and their rows.
+        
+#     Returns:
+#         tuple: A tuple containing the table name and the selected row.
+#     """
+#     pivot_rows = {}
+#     for table_name, rows in tables_rows.items():
+#         # Select a random row from the table
+#         row = random.choice(rows)
+#         pivot_rows[table_name] = row
+#     return pivot_rows
+
+def generate_view(table_name, tables):
     """
-    Select a random row from the given tables_rows dictionary.
+    Generate a SQL view statement for the given table name.
     
     Args:
-        tables_rows (dict): Dictionary containing table names and their rows.
+        table_name (str): The name of the table to generate a view for.
+        tables (dict): Dictionary containing table names and their columns.
         
     Returns:
-        tuple: A tuple containing the table name and the selected row.
+        str: A SQL view statement.
     """
-    pivot_rows = {}
-    for table_name, rows in tables_rows.items():
-        # Select a random row from the table
-        row = random.choice(rows)
-        pivot_rows[table_name] = row
-    return pivot_rows
+    # Generate a random SELECT statement for the view
+    # Select a random column from the table
+    selected_column = random.choice(tables[table_name])
+    # Generate a random SELECT statement for the view
+    # 30% chance to create temporary view
+    if random.random() < 0.3:
+        select_stmt = f"CREATE TEMP VIEW IF NOT EXISTS v_{table_name} AS SELECT {selected_column} FROM {table_name};"
+    # 30% chance to select distinct values
+    elif random.random() < 0.3:
+        select_stmt = f"CREATE VIEW IF NOT EXISTS v_{table_name} AS SELECT DISTINCT {selected_column} FROM {table_name};"
+    # 30% chance to select all columns
+    elif random.random() < 0.3:
+        select_stmt = f"CREATE VIEW IF NOT EXISTS v_{table_name} AS SELECT * FROM {table_name};"
+    # 30% chance to select a random number of columns
+    elif random.random() < 0.3:
+        num_columns = random.randint(1, len(tables[table_name]))
+        column_indices = random.sample(range(len(tables[table_name])), num_columns)
+        selected_columns = [tables[table_name][i] for i in column_indices]
+        select_stmt = f"CREATE VIEW IF NOT EXISTS v_{table_name} AS SELECT {', '.join(selected_columns)} FROM {table_name};"
+
+    else:
+        select_stmt = f"CREATE VIEW IF NOT EXISTS v_{table_name} AS SELECT {selected_column} FROM {table_name};"
+    return select_stmt
+
+def generate_index(table_name, tables):
+    """
+    Generate a SQL index statement for the given table name.
+    
+    Args:
+        table_name (str): The name of the table to generate an index for.
+        tables (dict): Dictionary containing table names and their columns.
+        
+    Returns:
+        str: A SQL index statement.
+    """
+    # Generate a random index statement for the table
+    # Select a random column from the table
+    selected_column = random.choice(tables[table_name])
+    # 30% chance to create a unique index
+    if random.random() < 0.:
+        index_stmt = f"CREATE UNIQUE INDEX IF NOT EXISTS idx_{table_name} ON {table_name} ({selected_column});"
+    # 30% chance to create a partial index
+    #elif random.random() < 0.3:
+        #index_stmt = f"CREATE INDEX IF NOT EXISTS idx_{table_name} ON {table_name} ({selected_column}) WHERE {selected_column} IS NOT NULL;"
+    else:
+        index_stmt = f"CREATE INDEX IF NOT EXISTS idx_{table_name} ON {table_name} ({selected_column});"
+    return index_stmt
 
 def generate_sql_tables_query(sql_stmts, tables_stmts):
     """
@@ -318,10 +386,10 @@ if __name__ == "__main__":
         print(f"{table_name}: {rows} \n")
         print(sql_stmts[table_name] + "\n")
 
-    pivot_rows = select_pivot_row(tables_rows)
-    print("Pivot rows:")
-    for table_name, row in pivot_rows.items():
-        print(f"{table_name}: {row} \n")
+    # pivot_rows = select_pivot_row(tables_rows)
+    # print("Pivot rows:")
+    # for table_name, row in pivot_rows.items():
+    #     print(f"{table_name}: {row} \n")
     
     sql_query = generate_sql_tables_query(sql_stmts, tables_stmts)
     print("SQL Query to create tables and insert rows:")

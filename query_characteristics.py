@@ -57,10 +57,12 @@ def collect_statistics():
         analysis = analyze_query(query)
 
         # Check query validity
+        #if is_query_valid(query, sqlu.SQLITE_3_49_2):
         if is_query_valid(query, sqlu.SQLITE_3_26_0):
             valid_queries += 1
         else:
             invalid_queries += 1
+            print(f"Invalid query: {query}")
 
         # Sum up clause counts
         for clause, count in analysis["clause_counts"].items():
