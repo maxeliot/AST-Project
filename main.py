@@ -155,6 +155,10 @@ if __name__ == "__main__":
                 print(row)
             print()
 
+            # Log the bug to a file
+            with open("/workspace/results/bug_queries.txt"):
+                f.write(f"{sql_query}{query}\n")
+
 
         if(i % coverage_interval == 0):
             coverage(i)

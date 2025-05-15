@@ -77,5 +77,5 @@ gen_mean, gen_std_dev = parse_csv_and_calculate_stats(performance_generation_fil
 all_mean, all_std_dev = parse_csv_and_calculate_stats(performance_all_file)
 
 # Output the results with thousands separators
-print(f"Performance Generation - Mean: {gen_mean:,.0f}, Standard Deviation: {gen_std_dev:,.0f}")
-print(f"Performance All - Mean: {all_mean:,.0f}, Standard Deviation: {all_std_dev:,.0f}")
+print(f"Generated queries per minute - Mean: {gen_mean:,.0f}, Standard Deviation: {gen_std_dev:,.0f}")
+print(f"Generated and executed queries per minute  - Mean: {all_mean:,.0f}, Standard Deviation: {all_std_dev:,.0f}")
