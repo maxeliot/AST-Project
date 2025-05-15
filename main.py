@@ -5,6 +5,7 @@ import subprocess
 import table_generation
 import glob
 import os
+import argparse
 
 import re
 import csv
@@ -98,18 +99,32 @@ def measure_performance_all(number_queries):
 
         
     
-if __name__ == "__main__":        
-    
+if __name__ == "__main__":
     for i in range(10):
         measure_performance_generation(NUMBER_OF_QUERIES)
         measure_performance_all(NUMBER_OF_QUERIES)
 
+    parser = argparse.ArgumentParser(description="Run performance and coverage tests.")
+    parser.add_argument(
+        "--num-queries",
+        type=int,
+        default=200,
+        help="Number of queries to generate and test (default: 200)"
+    )
+    args = parser.parse_args()
+    num_queries = args.num_queries
+    coverage_interval = num_queries // 10 if num_queries > 10 else 1
+    
+    
+
 
     # Cleanup .gcda files before running the query
     cleanup_gcda_files()
+
+    found_bug = False
     
 
-    for i in range(NUMBER_OF_QUERIES):
+    for i in range(num_queries):
         schema, tables_rows, sql_stmts, tables_stmts = table_generation.generate_tables()
         sql_query = table_generation.generate_sql_tables_query(sql_stmts, tables_stmts)
 
@@ -129,6 +144,7 @@ if __name__ == "__main__":
         rows_returned2 = result2[0].split("\n")
 
         if set(rows_returned2) != set(rows_returned):
+            found_bug = True
             print(f"Results on different versions do not match (order independent): {set(rows_returned2) != set(rows_returned)}")
             print("Rows returned on version 3.26.0:")
             for row in rows_returned:
@@ -140,6 +156,8 @@ if __name__ == "__main__":
             print()
 
 
-        if(i % COVERAGE_INTERVAL == 0):
+        if(i % coverage_interval == 0):
             coverage(i)
-
+    
+    if not found_bug:
+        print("No bugs found in the generated queries.")

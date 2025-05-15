@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
+NUM_QUERIES=${1:-200}  # Default to 200 if not provided
+
 python3 /workspace/cleanup_files.py
-python3 /workspace/main.py
+python3 /workspace/main.py --num-queries "$NUM_QUERIES"
 python3 /workspace/query_characteristics.py
 python3 /workspace/plots/performance.py
 python3 /workspace/plots/expression_depth.py
