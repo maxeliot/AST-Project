@@ -147,12 +147,6 @@ if __name__ == "__main__":
             print()
 
 
-        #print(result2)
-        if(result2[1] != ""):
-            print(f"Error in query: {query}")
-            print(f"Error message: {result2[1]}")
-            print()
-
         if(i % COVERAGE_INTERVAL == 0):
             coverage(i)
 
