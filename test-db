@@ -1,3 +1,9 @@
 #!/usr/bin/env bash
 
-python3 /home/test/AST-Project/main.py
+python3 /workspace/cleanup_files.py
+python3 /workspace/main.py
+python3 /workspace/query_characteristics.py
+python3 /workspace/plots/performance.py
+python3 /workspace/plots/expression_depth.py
+python3 /workspace/plots/coverage.py
+python3 /workspace/plots/clause_frequency.py

@@ -98,12 +98,7 @@ def measure_performance_all(number_queries):
 
         
     
-if __name__ == "__main__":
-    # Clear the log files
-    with open("/workspace/results/queries.txt", "w") as f:
-        f.write("")
-    with open("/workspace/results/coverage.csv", "w") as f:
-        f.write("")
+if __name__ == "__main__":        
     
     for i in range(10):
         measure_performance_generation(NUMBER_OF_QUERIES)
